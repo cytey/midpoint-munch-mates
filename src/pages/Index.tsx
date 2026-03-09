@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Utensils, Users, MapPin, Vote, Bell, ArrowRight, Plus, Trash2, Search, Loader2, PartyPopper, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import { LocationInput } from "@/components/LocationInput";
 import { ParticipantCard } from "@/components/ParticipantCard";
 import { PlaceCard } from "@/components/PlaceCard";
@@ -25,6 +26,7 @@ export default function Index() {
   const [activeParticipantId, setActiveParticipantId] = useState<string | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<CategoryId[]>(["restaurant", "cafe", "hawker"]);
   const [showFilters, setShowFilters] = useState(false);
+  const [searchRadius, setSearchRadius] = useState(2);
 
   const startSession = () => {
     if (!name.trim() || !email.trim()) {
@@ -89,7 +91,7 @@ export default function Index() {
       );
       
       const allResults = await Promise.all(
-        categoriesToSearch.map((cat) => searchNearby(mid.lat, mid.lng, cat))
+        categoriesToSearch.map((cat) => searchNearby(mid.lat, mid.lng, cat, searchRadius))
       );
 
       const seen = new Set<string>();
@@ -333,6 +335,25 @@ export default function Index() {
                 >
                   <p className="text-sm font-display font-bold mb-3">🍴 What are you looking for?</p>
                   <CategoryFilter selected={selectedCategories} onChange={setSelectedCategories} />
+                  
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-display font-bold">📍 Search Radius</p>
+                      <span className="text-sm font-display font-semibold text-primary">{searchRadius} km</span>
+                    </div>
+                    <Slider
+                      value={[searchRadius]}
+                      onValueChange={(v) => setSearchRadius(v[0])}
+                      min={1}
+                      max={5}
+                      step={0.5}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                      <span>1 km</span>
+                      <span>5 km</span>
+                    </div>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
