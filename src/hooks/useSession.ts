@@ -72,13 +72,19 @@ export function useSession(sessionId: string | null) {
   // Add participant to DB
   const addParticipantToDb = useCallback(async (sessId: string, name: string, email: string): Promise<Participant> => {
     const id = generateId();
+    const newParticipant: Participant = { id, name, email, location: null };
+    
+    // Optimistically update local state
+    setSession((prev) => prev ? { ...prev, participants: [...prev.participants, newParticipant] } : prev);
+    
     await supabase.from("participants").insert({
       id,
       session_id: sessId,
       name,
       email,
     });
-    return { id, name, email, location: null };
+    
+    return newParticipant;
   }, []);
 
   // Remove participant from DB
