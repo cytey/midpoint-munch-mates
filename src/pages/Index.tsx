@@ -26,6 +26,7 @@ export default function Index() {
   const [activeParticipantId, setActiveParticipantId] = useState<string | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<CategoryId[]>(["restaurant", "cafe", "hawker"]);
   const [showFilters, setShowFilters] = useState(false);
+  const [searchRadius, setSearchRadius] = useState(2);
 
   const startSession = () => {
     if (!name.trim() || !email.trim()) {
