@@ -15,6 +15,7 @@ export interface Place {
   lat: number;
   lng: number;
   votes: string[]; // participant ids
+  distanceKm?: number; // distance from midpoint
 }
 
 export interface Session {

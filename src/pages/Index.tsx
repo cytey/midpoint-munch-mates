@@ -100,13 +100,16 @@ export default function Index() {
         const key = `${r.LATITUDE}-${r.LONGITUDE}`;
         if (!seen.has(key)) {
           seen.add(key);
+          const placeLat = parseFloat(r.LATITUDE);
+          const placeLng = parseFloat(r.LONGITUDE);
           places.push({
             id: generateId(),
             name: r.SEARCHVAL || r.BUILDING || "Unknown",
             address: r.ADDRESS,
-            lat: parseFloat(r.LATITUDE),
-            lng: parseFloat(r.LONGITUDE),
+            lat: placeLat,
+            lng: placeLng,
             votes: [],
+            distanceKm: getDistance(mid.lat, mid.lng, placeLat, placeLng),
           });
         }
       });
