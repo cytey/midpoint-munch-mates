@@ -75,12 +75,21 @@ export default function Index() {
       return;
     }
 
+    if (selectedCategories.length === 0) {
+      toast.error("Please select at least one category");
+      return;
+    }
+
     const mid = calculateMidpoint(located.map((p) => p.location!));
     setSearchingPlaces(true);
 
     try {
+      const categoriesToSearch = selectedCategories.map(
+        (id) => PLACE_CATEGORIES.find((c) => c.id === id)?.label || id
+      );
+      
       const allResults = await Promise.all(
-        FOOD_CATEGORIES.map((cat) => searchNearby(mid.lat, mid.lng, cat))
+        categoriesToSearch.map((cat) => searchNearby(mid.lat, mid.lng, cat))
       );
 
       const seen = new Set<string>();
