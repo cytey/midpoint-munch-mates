@@ -335,6 +335,25 @@ export default function Index() {
                 >
                   <p className="text-sm font-display font-bold mb-3">🍴 What are you looking for?</p>
                   <CategoryFilter selected={selectedCategories} onChange={setSelectedCategories} />
+                  
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-display font-bold">📍 Search Radius</p>
+                      <span className="text-sm font-display font-semibold text-primary">{searchRadius} km</span>
+                    </div>
+                    <Slider
+                      value={[searchRadius]}
+                      onValueChange={(v) => setSearchRadius(v[0])}
+                      min={1}
+                      max={5}
+                      step={0.5}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                      <span>1 km</span>
+                      <span>5 km</span>
+                    </div>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
