@@ -23,6 +23,8 @@ export default function Index() {
   const [newEmail, setNewEmail] = useState("");
   const [searchingPlaces, setSearchingPlaces] = useState(false);
   const [activeParticipantId, setActiveParticipantId] = useState<string | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<CategoryId[]>(["restaurant", "cafe", "hawker"]);
+  const [showFilters, setShowFilters] = useState(false);
 
   const startSession = () => {
     if (!name.trim() || !email.trim()) {
