@@ -26,7 +26,7 @@ export async function searchAddress(query: string): Promise<OneMapSearchResult[]
   return data.results || [];
 }
 
-export async function searchNearby(lat: number, lng: number, category: string): Promise<OneMapSearchResult[]> {
+export async function searchNearby(lat: number, lng: number, category: string, radiusKm: number = 2): Promise<OneMapSearchResult[]> {
   // Use OneMap's search with location context
   const res = await fetch(
     `${ONEMAP_BASE}/api/common/elastic/search?searchVal=${encodeURIComponent(category)}&returnGeom=Y&getAddrDetails=Y&pageNum=1`
@@ -34,13 +34,14 @@ export async function searchNearby(lat: number, lng: number, category: string): 
   const data = await res.json();
   const results: OneMapSearchResult[] = data.results || [];
   
-  // Filter and sort by distance from midpoint
+  // Filter by radius from midpoint, then sort by distance
   return results
     .filter((r) => r.LATITUDE && r.LONGITUDE)
     .map((r) => ({
       ...r,
       _dist: getDistance(lat, lng, parseFloat(r.LATITUDE), parseFloat(r.LONGITUDE)),
     }))
+    .filter((r) => r._dist <= radiusKm)
     .sort((a, b) => a._dist - b._dist)
     .slice(0, 15)
     .map(({ _dist, ...rest }) => rest as OneMapSearchResult);
