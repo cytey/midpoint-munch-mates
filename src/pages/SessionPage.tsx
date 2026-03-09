@@ -305,10 +305,10 @@ export default function SessionPage() {
                       <p className="text-sm font-display font-bold">📍 Search Radius</p>
                       <span className="text-sm font-display font-semibold text-primary">{searchRadius} km</span>
                     </div>
-                    <Slider value={[searchRadius]} onValueChange={(v) => setSearchRadius(v[0])} min={1} max={5} step={0.5} className="w-full" />
+                    <Slider value={[searchRadius]} onValueChange={(v) => setSearchRadius(v[0])} min={1} max={10} step={0.5} className="w-full" />
                     <div className="flex justify-between text-xs text-muted-foreground mt-1">
                       <span>1 km</span>
-                      <span>5 km</span>
+                      <span>10 km</span>
                     </div>
                   </div>
                 </motion.div>
