@@ -91,7 +91,7 @@ export default function Index() {
       );
       
       const allResults = await Promise.all(
-        categoriesToSearch.map((cat) => searchNearby(mid.lat, mid.lng, cat))
+        categoriesToSearch.map((cat) => searchNearby(mid.lat, mid.lng, cat, searchRadius))
       );
 
       const seen = new Set<string>();
