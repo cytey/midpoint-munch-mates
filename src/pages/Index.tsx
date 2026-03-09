@@ -1,17 +1,16 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Utensils, Users, MapPin, Vote, Bell, ArrowRight, Plus, Trash2, Search, Loader2, PartyPopper } from "lucide-react";
+import { Utensils, Users, MapPin, Vote, Bell, ArrowRight, Plus, Trash2, Search, Loader2, PartyPopper, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LocationInput } from "@/components/LocationInput";
 import { ParticipantCard } from "@/components/ParticipantCard";
 import { PlaceCard } from "@/components/PlaceCard";
 import { MeetMap } from "@/components/MeetMap";
+import { CategoryFilter, PLACE_CATEGORIES, type CategoryId } from "@/components/CategoryFilter";
 import { createSession, generateId, type Session, type Participant, type Place } from "@/lib/session";
 import { calculateMidpoint, searchNearby, type LatLng } from "@/lib/onemap";
 import { toast } from "sonner";
-
-const FOOD_CATEGORIES = ["restaurant", "cafe", "hawker", "bar", "food court", "bistro"];
 
 export default function Index() {
   const [session, setSession] = useState<Session | null>(null);
