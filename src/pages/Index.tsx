@@ -10,7 +10,7 @@ import { PlaceCard } from "@/components/PlaceCard";
 import { MeetMap } from "@/components/MeetMap";
 import { CategoryFilter, PLACE_CATEGORIES, type CategoryId } from "@/components/CategoryFilter";
 import { createSession, generateId, type Session, type Participant, type Place } from "@/lib/session";
-import { calculateMidpoint, searchNearby, type LatLng } from "@/lib/onemap";
+import { calculateMidpoint, searchNearby, getDistance, type LatLng } from "@/lib/onemap";
 import { toast } from "sonner";
 
 export default function Index() {
