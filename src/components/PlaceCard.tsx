@@ -1,4 +1,4 @@
-import { ThumbsUp, MapPin } from "lucide-react";
+import { ThumbsUp, MapPin, Navigation } from "lucide-react";
 import { Place } from "@/lib/session";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -12,6 +12,12 @@ interface PlaceCardProps {
 
 export function PlaceCard({ place, currentUserId, onVote, isConfirmed }: PlaceCardProps) {
   const hasVoted = place.votes.includes(currentUserId);
+
+  const formatDistance = (km?: number) => {
+    if (km === undefined) return null;
+    if (km < 1) return `${Math.round(km * 1000)}m`;
+    return `${km.toFixed(1)}km`;
+  };
 
   return (
     <motion.div
@@ -32,6 +38,14 @@ export function PlaceCard({ place, currentUserId, onVote, isConfirmed }: PlaceCa
             <MapPin className="w-3 h-3 shrink-0" />
             <p className="text-xs truncate">{place.address}</p>
           </div>
+          {place.distanceKm !== undefined && (
+            <div className="flex items-center gap-1 mt-1.5">
+              <Navigation className="w-3 h-3 text-primary shrink-0" />
+              <span className="text-xs font-display font-semibold text-primary">
+                {formatDistance(place.distanceKm)} from midpoint
+              </span>
+            </div>
+          )}
         </div>
         <Button
           size="sm"

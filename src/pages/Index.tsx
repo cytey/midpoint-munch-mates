@@ -10,7 +10,7 @@ import { PlaceCard } from "@/components/PlaceCard";
 import { MeetMap } from "@/components/MeetMap";
 import { CategoryFilter, PLACE_CATEGORIES, type CategoryId } from "@/components/CategoryFilter";
 import { createSession, generateId, type Session, type Participant, type Place } from "@/lib/session";
-import { calculateMidpoint, searchNearby, type LatLng } from "@/lib/onemap";
+import { calculateMidpoint, searchNearby, getDistance, type LatLng } from "@/lib/onemap";
 import { toast } from "sonner";
 
 export default function Index() {
@@ -100,13 +100,16 @@ export default function Index() {
         const key = `${r.LATITUDE}-${r.LONGITUDE}`;
         if (!seen.has(key)) {
           seen.add(key);
+          const placeLat = parseFloat(r.LATITUDE);
+          const placeLng = parseFloat(r.LONGITUDE);
           places.push({
             id: generateId(),
             name: r.SEARCHVAL || r.BUILDING || "Unknown",
             address: r.ADDRESS,
-            lat: parseFloat(r.LATITUDE),
-            lng: parseFloat(r.LONGITUDE),
+            lat: placeLat,
+            lng: placeLng,
             votes: [],
+            distanceKm: getDistance(mid.lat, mid.lng, placeLat, placeLng),
           });
         }
       });
