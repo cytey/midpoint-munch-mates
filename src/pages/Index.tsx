@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Utensils, Users, MapPin, Vote, Bell, ArrowRight, Plus, Trash2, Search, Loader2, PartyPopper, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import { LocationInput } from "@/components/LocationInput";
 import { ParticipantCard } from "@/components/ParticipantCard";
 import { PlaceCard } from "@/components/PlaceCard";
