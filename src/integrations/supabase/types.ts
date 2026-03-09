@@ -14,7 +14,161 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      participants: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          location_label: string | null
+          location_lat: number | null
+          location_lng: number | null
+          name: string
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id: string
+          location_label?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          name: string
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          location_label?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          name?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participants_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      places: {
+        Row: {
+          address: string
+          created_at: string
+          distance_km: number | null
+          id: string
+          lat: number
+          lng: number
+          name: string
+          session_id: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          distance_km?: number | null
+          id: string
+          lat: number
+          lng: number
+          name: string
+          session_id: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          distance_km?: number | null
+          id?: string
+          lat?: number
+          lng?: number
+          name?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "places_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sessions: {
+        Row: {
+          confirmed_place_id: string | null
+          created_at: string
+          id: string
+          midpoint_lat: number | null
+          midpoint_lng: number | null
+          status: string
+        }
+        Insert: {
+          confirmed_place_id?: string | null
+          created_at?: string
+          id: string
+          midpoint_lat?: number | null
+          midpoint_lng?: number | null
+          status?: string
+        }
+        Update: {
+          confirmed_place_id?: string | null
+          created_at?: string
+          id?: string
+          midpoint_lat?: number | null
+          midpoint_lng?: number | null
+          status?: string
+        }
+        Relationships: []
+      }
+      votes: {
+        Row: {
+          created_at: string
+          id: string
+          participant_id: string
+          place_id: string
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          participant_id: string
+          place_id: string
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          participant_id?: string
+          place_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "votes_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "votes_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: false
+            referencedRelation: "places"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "votes_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
