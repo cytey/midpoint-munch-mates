@@ -1,17 +1,16 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Utensils, Users, MapPin, Vote, Bell, ArrowRight, Plus, Trash2, Search, Loader2, PartyPopper } from "lucide-react";
+import { Utensils, Users, MapPin, Vote, Bell, ArrowRight, Plus, Trash2, Search, Loader2, PartyPopper, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LocationInput } from "@/components/LocationInput";
 import { ParticipantCard } from "@/components/ParticipantCard";
 import { PlaceCard } from "@/components/PlaceCard";
 import { MeetMap } from "@/components/MeetMap";
+import { CategoryFilter, PLACE_CATEGORIES, type CategoryId } from "@/components/CategoryFilter";
 import { createSession, generateId, type Session, type Participant, type Place } from "@/lib/session";
 import { calculateMidpoint, searchNearby, type LatLng } from "@/lib/onemap";
 import { toast } from "sonner";
-
-const FOOD_CATEGORIES = ["restaurant", "cafe", "hawker", "bar", "food court", "bistro"];
 
 export default function Index() {
   const [session, setSession] = useState<Session | null>(null);
@@ -24,6 +23,8 @@ export default function Index() {
   const [newEmail, setNewEmail] = useState("");
   const [searchingPlaces, setSearchingPlaces] = useState(false);
   const [activeParticipantId, setActiveParticipantId] = useState<string | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<CategoryId[]>(["restaurant", "cafe", "hawker"]);
+  const [showFilters, setShowFilters] = useState(false);
 
   const startSession = () => {
     if (!name.trim() || !email.trim()) {
@@ -74,12 +75,21 @@ export default function Index() {
       return;
     }
 
+    if (selectedCategories.length === 0) {
+      toast.error("Please select at least one category");
+      return;
+    }
+
     const mid = calculateMidpoint(located.map((p) => p.location!));
     setSearchingPlaces(true);
 
     try {
+      const categoriesToSearch = selectedCategories.map(
+        (id) => PLACE_CATEGORIES.find((c) => c.id === id)?.label || id
+      );
+      
       const allResults = await Promise.all(
-        FOOD_CATEGORIES.map((cat) => searchNearby(mid.lat, mid.lng, cat))
+        categoriesToSearch.map((cat) => searchNearby(mid.lat, mid.lng, cat))
       );
 
       const seen = new Set<string>();
@@ -302,23 +312,49 @@ export default function Index() {
             </Button>
           )}
 
-          <Button
-            onClick={findMeetingPoint}
-            disabled={locatedCount < 2 || searchingPlaces}
-            className="w-full gradient-primary text-primary-foreground font-display font-bold text-base h-12 shadow-warm disabled:opacity-50"
-          >
-            {searchingPlaces ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Finding places...
-              </>
-            ) : (
-              <>
-                <Search className="w-4 h-4 mr-2" />
-                Find Meeting Point ({locatedCount}/{session.participants.length} located)
-              </>
-            )}
-          </Button>
+          <div className="space-y-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className="w-full font-display"
+            >
+              <Filter className="w-4 h-4 mr-2" />
+              {showFilters ? "Hide Filters" : "Show Filters"} ({selectedCategories.length} selected)
+            </Button>
+
+            <AnimatePresence>
+              {showFilters && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="p-4 rounded-xl border bg-card shadow-card"
+                >
+                  <p className="text-sm font-display font-bold mb-3">🍴 What are you looking for?</p>
+                  <CategoryFilter selected={selectedCategories} onChange={setSelectedCategories} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <Button
+              onClick={findMeetingPoint}
+              disabled={locatedCount < 2 || searchingPlaces || selectedCategories.length === 0}
+              className="w-full gradient-primary text-primary-foreground font-display font-bold text-base h-12 shadow-warm disabled:opacity-50"
+            >
+              {searchingPlaces ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Finding places...
+                </>
+              ) : (
+                <>
+                  <Search className="w-4 h-4 mr-2" />
+                  Find Meeting Point ({locatedCount}/{session.participants.length} located)
+                </>
+              )}
+            </Button>
+          </div>
         </motion.div>
       </div>
     );
