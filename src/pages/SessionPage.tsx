@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Utensils, Users, MapPin, Vote, Bell, Plus, Trash2, Search, Loader2, PartyPopper, Filter, Link2, Copy } from "lucide-react";
+import { Utensils, Users, MapPin, Vote, Bell, Plus, Trash2, Search, Loader2, PartyPopper, Filter, Link2, Share2, MapPinned } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
@@ -94,8 +94,17 @@ export default function SessionPage() {
     toast.success(`Location set!`);
   };
 
-  const copyShareLink = () => {
+  const copyShareLink = async () => {
     const url = `${window.location.origin}/session/${sessionId}`;
+    const text = "Help us pick where to eat! Add your location and vote with us here:";
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "meet2eat", text, url });
+        return;
+      } catch {
+        // user dismissed the share sheet; fall through to copy
+      }
+    }
     navigator.clipboard.writeText(url);
     toast.success("Share link copied to clipboard!");
   };
@@ -199,10 +208,18 @@ export default function SessionPage() {
           <p className="text-muted-foreground font-body text-lg mb-2">You've been invited to join a session!</p>
           <p className="text-sm text-muted-foreground mb-6">Session #{session.id} · {session.participants.length} participant(s)</p>
 
+          <div className="flex items-start gap-3 p-4 rounded-xl bg-muted/50 border mb-6 text-left">
+            <MapPinned className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+            <p className="text-sm text-muted-foreground font-body leading-relaxed">
+              meet2eat finds the halfway point between everyone in the group, then you all vote on
+              where to eat or hang out. Just enter your name, drop your location, and you're in.
+            </p>
+          </div>
+
           <div className="space-y-3 text-left bg-card rounded-2xl p-6 shadow-card border">
             <h2 className="font-display font-bold text-lg mb-4">Join Session</h2>
             <Input placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} className="font-body" />
-            <Input placeholder="Your email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="font-body" />
+            <Input placeholder="Your email (optional)" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="font-body" />
             <Button onClick={joinSession} className="w-full gradient-primary text-primary-foreground font-display font-bold text-base h-12 shadow-warm">
               Join Session
             </Button>
@@ -236,7 +253,7 @@ export default function SessionPage() {
               {window.location.origin}/session/{sessionId}
             </p>
             <Button size="sm" variant="outline" onClick={copyShareLink} className="shrink-0">
-              <Copy className="w-3.5 h-3.5 mr-1" /> Copy
+              <Share2 className="w-3.5 h-3.5 mr-1" /> Share
             </Button>
           </div>
 
@@ -348,7 +365,7 @@ export default function SessionPage() {
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={copyShareLink} className="font-display">
-                <Copy className="w-3.5 h-3.5 mr-1" /> Share
+                <Share2 className="w-3.5 h-3.5 mr-1" /> Share
               </Button>
               <Button variant="outline" size="sm" onClick={() => setStep("setup")} className="font-display">← Back</Button>
             </div>
