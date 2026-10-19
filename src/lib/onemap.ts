@@ -45,7 +45,7 @@ export async function searchNearby(
 
   // Filter by distance from the group's midpoint, then sort nearest-first
   const seen = new Set<string>();
-  const out: OneMapSearchResult[] = [];
+  const out: DistResult[] = [];
   for (const r of results) {
     if (!r.LATITUDE || !r.LONGITUDE) continue;
     const key = `${r.LATITUDE}-${r.LONGITUDE}`;

@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Utensils, Users, Bell, Plus, Trash2, Search, Loader2, PartyPopper, Filter, Link2, Share2, MapPinned } from "lucide-react";
+import { Utensils, Users, Plus, Trash2, Search, Loader2, PartyPopper, Filter, MapPinned, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
@@ -11,18 +11,24 @@ import { ParticipantCard } from "@/components/ParticipantCard";
 import { PlaceCard } from "@/components/PlaceCard";
 import { MeetMap } from "@/components/MeetMap";
 import { CategoryFilter, PLACE_CATEGORIES, type CategoryId } from "@/components/CategoryFilter";
+import { ActivityFeed } from "@/components/ActivityFeed";
+import { CountdownTimer } from "@/components/CountdownTimer";
+import { ShareButtons } from "@/components/ShareButtons";
+import { QrCode } from "@/components/QrCode";
+import { AddPlaceDialog } from "@/components/AddPlaceDialog";
 import { useSession } from "@/hooks/useSession";
 import { calculateMidpoint, searchNearby, getDistance, type LatLng } from "@/lib/onemap";
-import { generateSessionId, isValidSessionId, type Place } from "@/lib/session";
+import { generateSessionId, type Place } from "@/lib/session";
 import { toast } from "sonner";
 
 export default function SessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   const {
-    session, loading, loadSession,
+    session, loading, voteRecords, loadSession,
     addParticipantToDb, removeParticipantFromDb, setLocationInDb,
     savePlacesToDb, toggleVoteInDb, confirmPlaceInDb,
+    addCustomPlaceToDb, setVoteDeadlineInDb, startRevoteInDb,
   } = useSession(sessionId || null);
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -38,6 +44,18 @@ export default function SessionPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [searchRadius, setSearchRadius] = useState(2);
   const [participantToDelete, setParticipantToDelete] = useState<string | null>(null);
+
+  const sessionUrl = sessionId ? `${window.location.origin}/session/${sessionId}` : "";
+
+  const myLocation = useMemo(() => {
+    const me = session?.participants.find((p) => p.id === currentUserId);
+    return me?.location || null;
+  }, [session, currentUserId]);
+
+  const votedParticipantIds = useMemo(
+    () => new Set(session?.places.flatMap((pl) => pl.votes) || []),
+    [session]
+  );
 
   // Load session on mount
   useEffect(() => {
@@ -99,21 +117,6 @@ export default function SessionPage() {
     toast.success("Location set!");
   };
 
-  const copyShareLink = async () => {
-    const url = `${window.location.origin}/session/${sessionId}`;
-    const text = "Help us pick where to eat! Add your location and vote with us here:";
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "meet2eat", text, url });
-        return;
-      } catch {
-        // user dismissed the share sheet; fall through to copy
-      }
-    }
-    navigator.clipboard.writeText(url);
-    toast.success("Share link copied to clipboard!");
-  };
-
   const findMeetingPoint = async () => {
     if (!session || !sessionId) return;
     const located = session.participants.filter((p) => p.location);
@@ -171,15 +174,46 @@ export default function SessionPage() {
     await toggleVoteInDb(sessionId, placeId, currentUserId);
   };
 
-  const confirmPlace = async () => {
-    if (!session || !sessionId) return;
-    const topPlace = [...session.places].sort((a, b) => b.votes.length - a.votes.length)[0];
-    if (!topPlace || topPlace.votes.length === 0) {
-      toast.error("No votes yet!");
-      return;
+  const startDeadline = async (minutes: number) => {
+    if (!sessionId) return;
+    try {
+      await setVoteDeadlineInDb(sessionId, minutes);
+      toast.success(`Voting ends in ${minutes} minutes`);
+    } catch {
+      toast.error("Could not start the timer");
     }
-    await confirmPlaceInDb(sessionId, topPlace.id);
-    toast.success(`${topPlace.name} confirmed!`, { duration: 5000 });
+  };
+
+  const addCustomPlace = async (place: Place) => {
+    if (!sessionId) return;
+    try {
+      await addCustomPlaceToDb(sessionId, place);
+      toast.success(`"${place.name}" added to the vote!`);
+    } catch {
+      toast.error("Could not add the place. The session may have moved on.");
+    }
+  };
+
+  const handleRevote = async () => {
+    if (!sessionId) return;
+    try {
+      await startRevoteInDb(sessionId);
+      toast.success("New round started — vote again!");
+    } catch {
+      toast.error("Could not start a new round");
+    }
+  };
+
+  const confirmPlaceById = async (placeId: string) => {
+    if (!sessionId || !session) return;
+    const place = session.places.find((p) => p.id === placeId);
+    if (!place) return;
+    try {
+      await confirmPlaceInDb(sessionId, placeId);
+      toast.success(`${place.name} confirmed!`, { duration: 5000 });
+    } catch {
+      toast.error("Could not confirm the place");
+    }
   };
 
   if (loading && !session) {
@@ -251,15 +285,17 @@ export default function SessionPage() {
             </div>
           </div>
 
-          {/* Share link */}
-          <div className="flex items-center gap-2 mb-6 p-3 rounded-xl border bg-card shadow-card">
-            <Link2 className="w-4 h-4 text-primary shrink-0" />
-            <p className="text-xs text-muted-foreground truncate flex-1 font-body">
-              {window.location.origin}/session/{sessionId}
-            </p>
-            <Button size="sm" variant="outline" onClick={copyShareLink} className="shrink-0">
-              <Share2 className="w-3.5 h-3.5 mr-1" /> Share
-            </Button>
+          {/* Share + QR */}
+          <div className="rounded-xl border bg-card shadow-card p-4 mb-6 space-y-3">
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground truncate flex-1 font-body">
+                {sessionUrl}
+              </p>
+            </div>
+            <ShareButtons sessionUrl={sessionUrl} onCopied={() => toast.success("Share link copied to clipboard!")} />
+            <div className="flex justify-center pt-1">
+              <QrCode value={sessionUrl} size={140} />
+            </div>
           </div>
 
           <h2 className="font-display font-bold text-lg mb-4">
@@ -271,7 +307,11 @@ export default function SessionPage() {
             {session.participants.map((p) => (
               <div key={p.id} className="relative group">
                 <div className="cursor-pointer" onClick={() => !p.location && setActiveParticipantId(p.id)}>
-                  <ParticipantCard participant={p} />
+                  <ParticipantCard
+                    participant={p}
+                    hasVoted={votedParticipantIds.has(p.id)}
+                    showVotedBadge={session.status !== "gathering"}
+                  />
                 </div>
                 {p.id !== currentUserId && (
                   <button
@@ -377,6 +417,11 @@ export default function SessionPage() {
   // MAP & VOTING
   if (step === "map" && session.midpoint) {
     const isConfirmed = session.status === "confirmed";
+    const totalParticipants = session.participants.length;
+    const participantsWhoVoted = votedParticipantIds.size;
+    const sortedPlaces = [...session.places].sort((a, b) => b.votes.length - a.votes.length);
+    const winner = sortedPlaces[0];
+    const hasWinner = winner && winner.votes.length > 0;
 
     return (
       <div className="min-h-screen px-4 py-6 max-w-2xl mx-auto">
@@ -388,58 +433,80 @@ export default function SessionPage() {
               </div>
               <h1 className="font-display font-extrabold text-xl">meet<span className="text-primary">2</span>eat</h1>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={copyShareLink} className="font-display">
-                <Share2 className="w-3.5 h-3.5 mr-1" /> Share
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setStep("setup")} className="font-display">← Back</Button>
-            </div>
+            <ShareButtons sessionUrl={sessionUrl} placeName={isConfirmed ? winner?.name : undefined} compact />
           </div>
 
           {isConfirmed && (
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="rounded-2xl gradient-accent p-4 mb-4 text-accent-foreground flex items-center gap-3">
               <PartyPopper className="w-6 h-6 shrink-0" />
-              <div>
+              <div className="flex-1">
                 <p className="font-display font-bold">It's confirmed!</p>
                 <p className="text-sm opacity-90">
-                  {session.places.find((p) => p.id === session.confirmedPlaceId)?.name} — Share the link so the whole group sees the result.
+                  {winner?.name} — Share the link so the whole group sees the result.
                 </p>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRevote}
+                className="shrink-0 bg-white/20 border-white/30 text-white hover:bg-white/30 font-display"
+              >
+                <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Re-vote
+              </Button>
             </motion.div>
+          )}
+
+          {!isConfirmed && (
+            <CountdownTimer session={session} onStart={startDeadline} canStart={true} />
           )}
 
           <MeetMap center={session.midpoint} participants={session.participants} places={session.places} midpoint={session.midpoint} />
 
           <div className="mt-6">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-display font-bold text-lg">
-                {isConfirmed ? "Confirmed Spot" : "Nearby Places — Vote!"}
-              </h2>
-              {!isConfirmed && (
-                <Button onClick={confirmPlace} size="sm" className="gradient-accent text-accent-foreground font-display font-bold">
-                  <Bell className="w-3.5 h-3.5 mr-1.5" /> Confirm Top
-                </Button>
-              )}
+            {!isConfirmed && (
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-display font-bold text-lg">Nearby Places — Vote!</h2>
+                <span className="text-sm font-display font-semibold text-primary">
+                  {participantsWhoVoted} of {totalParticipants} voted
+                </span>
+              </div>
+            )}
+
+            {!isConfirmed && <ActivityFeed voteRecords={voteRecords} participants={session.participants} places={session.places} />}
+
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-muted-foreground">
+                {isConfirmed ? "Confirmed Spot" : "Sorted by votes"}
+              </p>
+              <AddPlaceDialog onAdd={addCustomPlace} />
             </div>
 
             <div className="space-y-2">
-              {[...session.places]
-                .sort((a, b) => b.votes.length - a.votes.length)
-                .map((place) => (
-                  <PlaceCard
-                    key={place.id}
-                    place={place}
-                    currentUserId={currentUserId || ""}
-                    onVote={votePlace}
-                    isConfirmed={session.confirmedPlaceId === place.id}
-                  />
-                ))}
+              {sortedPlaces.map((place) => (
+                <PlaceCard
+                  key={place.id}
+                  place={place}
+                  currentUserId={currentUserId || ""}
+                  participants={session.participants}
+                  myLocation={myLocation}
+                  onVote={votePlace}
+                  onConfirm={confirmPlaceById}
+                  isConfirmed={session.confirmedPlaceId === place.id}
+                  isWinner={!isConfirmed && hasWinner && place.id === winner.id}
+                />
+              ))}
             </div>
 
             {session.places.length === 0 && (
               <p className="text-center text-muted-foreground py-8 font-body">
                 No places found nearby. Try adjusting participant locations.
               </p>
+            )}
+
+            {isConfirmed && (
+              <Button onClick={handleRevote} variant="outline" className="w-full mt-4 font-display">
+                <RefreshCw className="w-4 h-4 mr-2" /> Start another round
+              </Button>
             )}
           </div>
         </motion.div>

@@ -1,4 +1,5 @@
 import { generateCreatorKey, generateSessionId, isValidSessionId } from "./ids";
+import { type LatLng } from "./onemap";
 
 export interface Participant {
   id: string;
@@ -15,6 +16,7 @@ export interface Place {
   lng: number;
   votes: string[]; // participant ids
   distanceKm?: number; // distance from midpoint
+  isCustom?: boolean; // added by a participant rather than search
 }
 
 export interface Session {
@@ -25,6 +27,7 @@ export interface Session {
   confirmedPlaceId: string | null;
   status: "gathering" | "voting" | "confirmed";
   creatorKey: string | null;
+  voteDeadlineAt: string | null;
 }
 
 export function createEmptySession(): Session {
@@ -36,6 +39,7 @@ export function createEmptySession(): Session {
     confirmedPlaceId: null,
     status: "gathering",
     creatorKey: generateCreatorKey(),
+    voteDeadlineAt: null,
   };
 }
 

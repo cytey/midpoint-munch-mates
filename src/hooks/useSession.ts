@@ -4,6 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { generateCreatorKey, generateSessionId, type Session, type Participant, type Place } from "@/lib/session";
 import { type LatLng } from "@/lib/onemap";
 
+export interface VoteRecord {
+  placeId: string;
+  participantId: string;
+  createdAt: string;
+}
+
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -20,6 +26,7 @@ function clientWithCreatorKey(key: string | null): SupabaseClient {
 export function useSession(sessionId: string | null) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(false);
+  const [voteRecords, setVoteRecords] = useState<VoteRecord[]>([]);
 
   // Throttle realtime-triggered reloads: several events in one tick reload once
   const reloadThrottleRef = useRef(0);
@@ -44,6 +51,13 @@ export function useSession(sessionId: string | null) {
       }
 
       const s = sessRes.data;
+      setVoteRecords(
+        (voteRes.data || []).map((v) => ({
+          placeId: v.place_id,
+          participantId: v.participant_id,
+          createdAt: v.created_at,
+        }))
+      );
       const participants: Participant[] = (partRes.data || []).map((p) => ({
         id: p.id,
         name: p.name,
@@ -76,6 +90,7 @@ export function useSession(sessionId: string | null) {
         confirmedPlaceId: s.confirmed_place_id,
         status: s.status as Session["status"],
         creatorKey: localStorage.getItem(`m2e_creator_${s.id}`),
+        voteDeadlineAt: s.vote_deadline_at || null,
       };
 
       setSession(sess);
@@ -193,17 +208,16 @@ export function useSession(sessionId: string | null) {
 
   // Vote/unvote in DB
   const toggleVoteInDb = useCallback(async (sessId: string, placeId: string, participantId: string) => {
-    const { data: existing } = await supabase
+    // Try removing an existing vote first; zero deleted rows means none existed
+    const { data: deleted, error: delErr } = await supabase
       .from("votes")
-      .select("id")
+      .delete()
       .eq("place_id", placeId)
       .eq("participant_id", participantId)
-      .maybeSingle();
+      .select("id");
+    if (delErr) throw delErr;
 
-    if (existing) {
-      const { error } = await supabase.from("votes").delete().eq("id", existing.id);
-      if (error) throw error;
-    } else {
+    if (!deleted || deleted.length === 0) {
       const { error } = await supabase.from("votes").insert({
         place_id: placeId,
         participant_id: participantId,
@@ -222,6 +236,36 @@ export function useSession(sessionId: string | null) {
         status: "confirmed",
       })
       .eq("id", sessId);
+    if (error) throw error;
+  }, []);
+
+  // Add a participant-suggested place (works in gathering or voting phase)
+  const addCustomPlaceToDb = useCallback(async (sessId: string, place: Place) => {
+    const { error } = await supabase.from("places").insert({
+      id: place.id,
+      session_id: sessId,
+      name: place.name,
+      address: place.address,
+      lat: place.lat,
+      lng: place.lng,
+      distance_km: place.distanceKm || null,
+    });
+    if (error) throw error;
+  }, []);
+
+  // Start a voting countdown
+  const setVoteDeadlineInDb = useCallback(async (sessId: string, minutes: number) => {
+    const deadline = new Date(Date.now() + minutes * 60 * 1000).toISOString();
+    const { error } = await supabase
+      .from("sessions")
+      .update({ vote_deadline_at: deadline, status: "voting" })
+      .eq("id", sessId);
+    if (error) throw error;
+  }, []);
+
+  // Re-vote: clear the result via the privileged database function
+  const startRevoteInDb = useCallback(async (sessId: string) => {
+    const { error } = await supabase.rpc("start_revote", { p_session_id: sessId });
     if (error) throw error;
   }, []);
 
@@ -253,6 +297,7 @@ export function useSession(sessionId: string | null) {
   return {
     session,
     loading,
+    voteRecords,
     loadSession,
     createSessionInDb,
     addParticipantToDb,
@@ -261,5 +306,8 @@ export function useSession(sessionId: string | null) {
     savePlacesToDb,
     toggleVoteInDb,
     confirmPlaceInDb,
+    addCustomPlaceToDb,
+    setVoteDeadlineInDb,
+    startRevoteInDb,
   };
 }

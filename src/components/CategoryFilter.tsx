@@ -14,6 +14,9 @@ export const PLACE_CATEGORIES = [
   { id: "indian", label: "Indian", emoji: "🍛" },
   { id: "western", label: "Western", emoji: "🍔" },
   { id: "thai", label: "Thai", emoji: "🍲" },
+  { id: "mrt", label: "MRT Station", emoji: "🚇" },
+  { id: "park", label: "Park", emoji: "🌳" },
+  { id: "mall", label: "Mall", emoji: "🛍️" },
 ] as const;
 
 export type CategoryId = (typeof PLACE_CATEGORIES)[number]["id"];

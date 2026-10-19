@@ -17,6 +17,7 @@ export type Database = {
       participants: {
         Row: {
           created_at: string
+          creator_key: string | null
           email: string
           id: string
           location_label: string | null
@@ -27,6 +28,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          creator_key?: string | null
           email: string
           id: string
           location_label?: string | null
@@ -37,6 +39,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          creator_key?: string | null
           email?: string
           id?: string
           location_label?: string | null
@@ -104,6 +107,8 @@ export type Database = {
           midpoint_lat: number | null
           midpoint_lng: number | null
           status: string
+          updated_at: string
+          vote_deadline_at: string | null
         }
         Insert: {
           confirmed_place_id?: string | null
@@ -112,6 +117,8 @@ export type Database = {
           midpoint_lat?: number | null
           midpoint_lng?: number | null
           status?: string
+          updated_at?: string
+          vote_deadline_at?: string | null
         }
         Update: {
           confirmed_place_id?: string | null
@@ -120,6 +127,8 @@ export type Database = {
           midpoint_lat?: number | null
           midpoint_lng?: number | null
           status?: string
+          updated_at?: string
+          vote_deadline_at?: string | null
         }
         Relationships: []
       }
@@ -174,7 +183,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      finish_expired_votes: {
+        Args: Record<string, never>
+        Returns: undefined
+      }
+      start_revote: {
+        Args: { p_session_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
