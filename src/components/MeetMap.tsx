@@ -44,6 +44,15 @@ const placeIcon = new L.DivIcon({
   className: "",
 });
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 export function MeetMap({ center, participants, places, midpoint }: MeetMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -70,7 +79,7 @@ export function MeetMap({ center, participants, places, midpoint }: MeetMapProps
       if (p.location) {
         L.marker([p.location.lat, p.location.lng], { icon: participantIcon })
           .addTo(map)
-          .bindPopup(`<b>${p.name}</b><br/>${p.locationLabel || "Location set"}`);
+          .bindPopup(`<b>${escapeHtml(p.name)}</b><br/>${escapeHtml(p.locationLabel || "Location set")}`);
       }
     });
 
@@ -85,7 +94,7 @@ export function MeetMap({ center, participants, places, midpoint }: MeetMapProps
     places.forEach((pl) => {
       L.marker([pl.lat, pl.lng], { icon: placeIcon })
         .addTo(map)
-        .bindPopup(`<b>${pl.name}</b><br/>${pl.address}<br/>Votes: ${pl.votes.length}`);
+        .bindPopup(`<b>${escapeHtml(pl.name)}</b><br/>${escapeHtml(pl.address)}<br/>Votes: ${pl.votes.length}`);
     });
 
     // Fit bounds if there are markers

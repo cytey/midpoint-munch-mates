@@ -110,6 +110,9 @@ export function useSession(sessionId: string | null) {
       status: "voting",
     }).eq("id", sessId);
 
+    // Replace any previous search results so re-searching doesn't accumulate duplicates
+    await supabase.from("places").delete().eq("session_id", sessId);
+
     // Insert places
     const placeRows = places.map((p) => ({
       id: p.id,
