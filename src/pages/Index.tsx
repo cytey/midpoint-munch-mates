@@ -44,10 +44,10 @@ export default function Index() {
     try {
       const sessionId = await createSessionInDb();
       const participant = await addParticipantToDb(sessionId, name.trim(), email.trim());
-      localStorage.setItem(`m2e_user_${sessionId}`, participant.id);
+      localStorage.setItem(`m2e_creator_${sessionId}`, participant.creatorKey);
       navigate(`/session/${sessionId}`);
     } catch {
-      toast.error("Failed to create session");
+      toast.error("Failed to create session. Please try again.");
     }
     setCreating(false);
   };

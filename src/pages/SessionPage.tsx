@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Utensils, Users, MapPin, Vote, Bell, Plus, Trash2, Search, Loader2, PartyPopper, Filter, Link2, Share2, MapPinned } from "lucide-react";
+import { Utensils, Users, Bell, Plus, Trash2, Search, Loader2, PartyPopper, Filter, Link2, Share2, MapPinned } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { LocationInput } from "@/components/LocationInput";
 import { ParticipantCard } from "@/components/ParticipantCard";
 import { PlaceCard } from "@/components/PlaceCard";
@@ -12,7 +13,7 @@ import { MeetMap } from "@/components/MeetMap";
 import { CategoryFilter, PLACE_CATEGORIES, type CategoryId } from "@/components/CategoryFilter";
 import { useSession } from "@/hooks/useSession";
 import { calculateMidpoint, searchNearby, getDistance, type LatLng } from "@/lib/onemap";
-import { generateId, type Place } from "@/lib/session";
+import { generateSessionId, isValidSessionId, type Place } from "@/lib/session";
 import { toast } from "sonner";
 
 export default function SessionPage() {
@@ -36,6 +37,7 @@ export default function SessionPage() {
   const [selectedCategories, setSelectedCategories] = useState<CategoryId[]>(["restaurant", "cafe", "hawker"]);
   const [showFilters, setShowFilters] = useState(false);
   const [searchRadius, setSearchRadius] = useState(2);
+  const [participantToDelete, setParticipantToDelete] = useState<string | null>(null);
 
   // Load session on mount
   useEffect(() => {
@@ -60,38 +62,41 @@ export default function SessionPage() {
     if (session && (session.status === "voting" || session.status === "confirmed") && currentUserId) {
       setStep("map");
     }
-  }, [session?.status, currentUserId]);
+  }, [session, currentUserId]);
 
   const joinSession = async () => {
-    if (!name.trim() || !email.trim() || !sessionId) {
-      toast.error("Please enter your name and email");
+    if (!name.trim() || !sessionId) {
+      toast.error("Please enter your name to join");
       return;
     }
     const p = await addParticipantToDb(sessionId, name.trim(), email.trim());
     setCurrentUserId(p.id);
     localStorage.setItem(`m2e_user_${sessionId}`, p.id);
+    localStorage.setItem(`m2e_creator_${sessionId}`, p.creatorKey);
     setStep("setup");
     toast.success("You've joined the session!");
   };
 
   const addParticipant = async () => {
-    if (!newName.trim() || !newEmail.trim() || !sessionId) return;
+    if (!newName.trim() || !sessionId) return;
     await addParticipantToDb(sessionId, newName.trim(), newEmail.trim());
     setNewName("");
     setNewEmail("");
     setAddingParticipant(false);
   };
 
-  const removeParticipant = async (id: string) => {
-    if (id === currentUserId) return;
-    await removeParticipantFromDb(id);
-    if (activeParticipantId === id) setActiveParticipantId(null);
+  const confirmDeleteParticipant = async () => {
+    if (!participantToDelete || !sessionId) return;
+    await removeParticipantFromDb(sessionId, participantToDelete);
+    if (activeParticipantId === participantToDelete) setActiveParticipantId(null);
+    setParticipantToDelete(null);
   };
 
   const setLocation = async (participantId: string, location: LatLng, label: string) => {
-    await setLocationInDb(participantId, location, label);
+    if (!sessionId) return;
+    await setLocationInDb(sessionId, participantId, location, label);
     setActiveParticipantId(null);
-    toast.success(`Location set!`);
+    toast.success("Location set!");
   };
 
   const copyShareLink = async () => {
@@ -129,7 +134,7 @@ export default function SessionPage() {
         (id) => PLACE_CATEGORIES.find((c) => c.id === id)?.label || id
       );
       const allResults = await Promise.all(
-        categoriesToSearch.map((cat) => searchNearby(mid.lat, mid.lng, cat, searchRadius))
+        categoriesToSearch.map((cat) => searchNearby(mid, cat, searchRadius))
       );
 
       const seen = new Set<string>();
@@ -141,7 +146,7 @@ export default function SessionPage() {
           const placeLat = parseFloat(r.LATITUDE);
           const placeLng = parseFloat(r.LONGITUDE);
           places.push({
-            id: generateId(),
+            id: generateSessionId(),
             name: r.SEARCHVAL || r.BUILDING || "Unknown",
             address: r.ADDRESS,
             lat: placeLat,
@@ -174,7 +179,7 @@ export default function SessionPage() {
       return;
     }
     await confirmPlaceInDb(sessionId, topPlace.id);
-    toast.success(`${topPlace.name} confirmed! 🎉`, { duration: 5000 });
+    toast.success(`${topPlace.name} confirmed!`, { duration: 5000 });
   };
 
   if (loading && !session) {
@@ -270,7 +275,8 @@ export default function SessionPage() {
                 </div>
                 {p.id !== currentUserId && (
                   <button
-                    onClick={() => removeParticipant(p.id)}
+                    onClick={() => setParticipantToDelete(p.id)}
+                    aria-label={`Remove ${p.name}`}
                     className="absolute -right-2 -top-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <Trash2 className="w-3 h-3" />
@@ -284,7 +290,7 @@ export default function SessionPage() {
             {activeParticipantId && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mb-4 p-4 rounded-xl border bg-card shadow-card">
                 <p className="text-sm font-display font-bold mb-3">
-                  📍 Set location for {session.participants.find((p) => p.id === activeParticipantId)?.name}
+                  Set location for {session.participants.find((p) => p.id === activeParticipantId)?.name}
                 </p>
                 <LocationInput onLocationSelect={(loc, label) => setLocation(activeParticipantId, loc, label)} />
               </motion.div>
@@ -294,7 +300,7 @@ export default function SessionPage() {
           {addingParticipant ? (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-4 rounded-xl border bg-card shadow-card mb-4 space-y-3">
               <Input placeholder="Friend's name" value={newName} onChange={(e) => setNewName(e.target.value)} />
-              <Input placeholder="Friend's email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+              <Input placeholder="Friend's email (optional)" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
               <div className="flex gap-2">
                 <Button onClick={addParticipant} className="flex-1 gradient-primary text-primary-foreground font-display font-bold">Add</Button>
                 <Button variant="outline" onClick={() => setAddingParticipant(false)}>Cancel</Button>
@@ -315,11 +321,11 @@ export default function SessionPage() {
             <AnimatePresence>
               {showFilters && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="p-4 rounded-xl border bg-card shadow-card">
-                  <p className="text-sm font-display font-bold mb-3">🍴 What are you looking for?</p>
+                  <p className="text-sm font-display font-bold mb-3">What are you looking for?</p>
                   <CategoryFilter selected={selectedCategories} onChange={setSelectedCategories} />
                   <div className="mt-4 pt-4 border-t">
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm font-display font-bold">📍 Search Radius</p>
+                      <p className="text-sm font-display font-bold">Search Radius</p>
                       <span className="text-sm font-display font-semibold text-primary">{searchRadius} km</span>
                     </div>
                     <Slider value={[searchRadius]} onValueChange={(v) => setSearchRadius(v[0])} min={1} max={10} step={0.5} className="w-full" />
@@ -345,6 +351,25 @@ export default function SessionPage() {
             </Button>
           </div>
         </motion.div>
+
+        <AlertDialog open={!!participantToDelete} onOpenChange={(o) => !o && setParticipantToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove participant?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will remove{" "}
+                <span className="font-semibold">
+                  {session.participants.find((p) => p.id === participantToDelete)?.name}
+                </span>{" "}
+                and their location from the session. Their votes are removed too. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteParticipant}>Remove</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   }
@@ -377,7 +402,7 @@ export default function SessionPage() {
               <div>
                 <p className="font-display font-bold">It's confirmed!</p>
                 <p className="text-sm opacity-90">
-                  {session.places.find((p) => p.id === session.confirmedPlaceId)?.name} — Everyone has been notified!
+                  {session.places.find((p) => p.id === session.confirmedPlaceId)?.name} — Share the link so the whole group sees the result.
                 </p>
               </div>
             </motion.div>
@@ -388,7 +413,7 @@ export default function SessionPage() {
           <div className="mt-6">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-display font-bold text-lg">
-                {isConfirmed ? "🎉 Confirmed Spot" : "📍 Nearby Places — Vote!"}
+                {isConfirmed ? "Confirmed Spot" : "Nearby Places — Vote!"}
               </h2>
               {!isConfirmed && (
                 <Button onClick={confirmPlace} size="sm" className="gradient-accent text-accent-foreground font-display font-bold">

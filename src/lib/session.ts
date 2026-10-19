@@ -1,9 +1,8 @@
-import { LatLng } from "./onemap";
+import { generateCreatorKey, generateSessionId, isValidSessionId } from "./ids";
 
 export interface Participant {
   id: string;
   name: string;
-  email: string;
   location: LatLng | null;
   locationLabel?: string;
 }
@@ -25,19 +24,19 @@ export interface Session {
   places: Place[];
   confirmedPlaceId: string | null;
   status: "gathering" | "voting" | "confirmed";
+  creatorKey: string | null;
 }
 
-export function createSession(): Session {
+export function createEmptySession(): Session {
   return {
-    id: crypto.randomUUID().slice(0, 8),
+    id: generateSessionId(),
     participants: [],
     midpoint: null,
     places: [],
     confirmedPlaceId: null,
     status: "gathering",
+    creatorKey: generateCreatorKey(),
   };
 }
 
-export function generateId(): string {
-  return crypto.randomUUID().slice(0, 8);
-}
+export { generateCreatorKey, generateSessionId, isValidSessionId };

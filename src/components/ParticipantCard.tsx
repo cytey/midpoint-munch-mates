@@ -13,7 +13,6 @@ export function ParticipantCard({ participant }: ParticipantCardProps) {
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-display font-bold text-sm truncate">{participant.name}</p>
-        <p className="text-xs text-muted-foreground truncate">{participant.email}</p>
       </div>
       {participant.location ? (
         <div className="flex items-center gap-1 text-teal text-xs font-semibold">
